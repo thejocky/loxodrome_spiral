@@ -59,10 +59,20 @@ module form(shape_gen, cU = $U_COUNT, cV = $V_COUNT) {
 
 }
 
-$U_COUNT = 50;
+module formFromList(shapeList) {
+    uCount = len(shapeList[0]);
+    vCount = len(shapeList);
+    shape_gen = function (u, v)
+        shapeList[round(v*vCount)][round(u*uCount)];
+    
+    form(shape_gen, uCount, vCount);
+}
+
+$U_COUNT = 5;
 $V_COUNT = 5;
 
-
+include <shape_list.scad>
+formFromList(SHAPE_LIST);
 shere = sphere_gen(20);
 form(shere[1]);
 // sphere(5);
