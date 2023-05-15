@@ -31,6 +31,34 @@ sphere_point_gen = function (rad) function (u, v)
 function sphere_gen(rad) = 
     [sphere_angle_gen(rad), sphere_point_gen(rad), rad*2];
 
+function elypse_gen_2D(a, b) = function(u);
+    [cos(u*360)*b, sin(u*360)*a, 0];
+
+function rotate_2D(point, degrees) =
+    let(a0 = atan2(point.y, point.x), r=sqrt(point.x^2 + point.y^2))
+    [cos(a0+degrees), sin(a0+degrees)] * r;
+
+function rotate_3D(point, degrees) = 
+    let(ax0 = )
+
+function translate(offset) = function (point)
+    point + offset;
+
+function rotateX(degree) = function(point)
+    let(a0 = atan2(point.z, point.y), r=sqrt(point.x^2 + point.z^2))
+    [point.x, cos(a0+degrees), sin(a0+degrees)] * r;
+
+function rotateY(degree) = function(point)
+    let(a0 = atan2(point.z, point.y), r=sqrt(point.x^2 + point.z^2))
+    [point.x, cos(a0+degrees), sin(a0+degrees)] * r;
+
+function shapedTorus_point_gen(rad, crossSection) = function(u, v)
+    translate([cos(v*360), sin(v*360), 0]) (
+        series_rotate([rotateX(90), rotateZ(v*360)]) (
+            crossSection(u)
+        )
+    )
+
 module loxodrome(shape_gen, spiralAngle, spiralCount) {
     dH = 1/$fn;
 
@@ -42,6 +70,9 @@ module loxodrome(shape_gen, spiralAngle, spiralCount) {
     // path = 
     // points = [for (i = )]
 }
+
+
+    
 
 module form(shape_gen, cU = $U_COUNT, cV = $V_COUNT) {
     dU = 1/cU;
