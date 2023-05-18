@@ -41,16 +41,23 @@ sphere_point_gen = function (rad) function (u, v)
 // function rotate_3D(point, degrees) = 
 //     let(ax0 = )
 
-// function translate(offset) = function (point)
-//     point + offset;
+function translate(offset) = function (point)
+    point + offset;
 
-// function rotateX(degree) = function(point)
-//     let(a0 = atan2(point.z, point.y), r=sqrt(point.x^2 + point.z^2))
-//     [point.x, cos(a0+degrees), sin(a0+degrees)] * r;
+function rotateX(degree) = function(point)
+    let(a0 = atan2(point.z, point.y), r=sqrt(point.y^2 + point.z^2))
+    [point.x, cos(a0+degrees)*r, sin(a0+degrees)*r];
 
-// function rotateY(degree) = function(point)
-//     let(a0 = atan2(point.z, point.y), r=sqrt(point.x^2 + point.z^2))
-//     [point.x, cos(a0+degrees), sin(a0+degrees)] * r;
+function rotateY(degree) = function(point)
+    let(a0 = atan2(point.x, point.z), r=sqrt(point.x^2 + point.z^2))
+    [sin(a0+degrees)*r, point.y, cos(a0+degrees)*r];
+
+function rotateZ(degree) = function(point)
+    let(a0 = atan2(point.y, point.x), r=sqrt(point.x^2 + point.y^2))
+    [cos(a0+degrees)*r, sin(a0+degrees)*r, point.z];
+
+function magnitude_vec3(vec3) =
+    sqrt(vec3.x^2 + vec3.y^2, vec3.z^2);
 
 // function shapedTorus_point_gen(rad, crossSection) = function(u, v)
 //     translate([cos(v*360), sin(v*360), 0]) (
@@ -59,17 +66,55 @@ sphere_point_gen = function (rad) function (u, v)
 //         )
 //     )
 
-// module loxodrome(shape_gen, spiralAngle, spiralCount) {
-//     dH = 1/$fn;
+function real_du(u, v, shape_gen, du=0.01) =
+    (u > 0.5)?
+        (shape_gen(u, v) - shape_gen(u-du, v))/du
+    :   (shape_gen(u+du, v) - shape_gen(u, v))/du;
+function real_dv(u, v, shape_gen, dv=0.01) =
+    (u > 0.5)?
+        (shape_gen(u, v) - shape_gen(u, v-dv))/dv:
+        (shape_gen(u, v+dv) - shape_gen(u, v))/dv;
 
-//     // function generate_path(height, angle=0, returnList=[], depthLeft=$fn) = 
-//     //     // (depthLeft=0)?
-//     //     let (height = h + dH)
-//     //     concat(returnList, )
+module loxodrome(shape_gen, spiralAngle, rad, cU = $U_COUNT, cV = $V_COUNT) {
 
-//     // path = 
-//     // points = [for (i = )]
-// }
+    function gen_circle(u, v, shape_gen, rad) =
+        let(pos = shape_gen(u, v))
+        [for (i=[0:cV-1])
+        rotateZ(atan(point.y, point.x))(
+            translate([0,norm([pos.x, pos.y]), pos.z]) (
+                rotateY(i*360/cV) ([rad, 0, 0])
+            )
+        )
+        ];
+
+    function angle_vec3(vecA, vecB) = 
+        atan2(norm(cross(vecA,vecB)), vecA * vecB);
+
+    function gen_path(shape_gen, theta, dt, u=0, v=0) =
+        (v > 1)? []:
+        let(du = real_du(u, v, shape_gen), dv = real_dv(u, v, shape_gen),
+            phi = angle_vec3(du, dv),
+            uChange = dt * sin(theta) / (sin(phi) * norm(du)),
+            vChange = dt * sin(phi-theta) / (sin(180-phi) * norm(dv)))
+        concat([u,v], gen_path(shaoe_gen, theta, dt, u+uChange, v+vChange));
+
+
+
+    // Generate points
+    points = [];
+    polyhedron(gen_circle(0, 0.5, shape_gen, rad), );
+
+    // function generate_path(height, angle=0, returnList=[], depthLeft=$fn) = 
+    //     // (depthLeft=0)?
+    //     let (height = h + dH)
+    //     concat(returnList, )
+
+    // path = 
+    // points = [for (i = )]
+}
+
+loxodrome(sphere_point_gen(20), 45, 3, 30, 10);
+
 
 
     
@@ -110,7 +155,6 @@ module formFromList(shapeList) {
 
 $U_COUNT = 5;
 $V_COUNT = 5;
-
 // SHAPE_LIST = [
 //     [[0,0,0], [0,1,0], [0.5,2,0.5]],
 //     [[1,0,0], [1,1,0], [0.5,2,0.5]],
