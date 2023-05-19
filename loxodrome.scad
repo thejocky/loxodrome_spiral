@@ -73,12 +73,12 @@ function magnitude_vec3(vec3) =
 //         )
 //     )
 
-function real_du(u, v, shape_gen, du=0.01) =
+function real_du(u, v, shape_gen, du=0.001) =
     echo (shape_gen(u, v), shape_gen(u+du, v))
     (u > 0.5)?
         (shape_gen(u, v) - shape_gen(u-du, v))/du
     :   (shape_gen(u+du, v) - shape_gen(u, v))/du;
-function real_dv(u, v, shape_gen, dv=0.01) =
+function real_dv(u, v, shape_gen, dv=0.001) =
     (v > 0.5)?
         (shape_gen(u, v) - shape_gen(u, v-dv))/dv:
         (shape_gen(u, v+dv) - shape_gen(u, v))/dv;
@@ -102,18 +102,23 @@ module loxodrome(shape_gen, spiralAngle, rad, cU = $U_COUNT, cV = $V_COUNT) {
         (v > 1)? []:
         let(du = real_du(u, v, shape_gen), dv = real_dv(u, v, shape_gen),
             phi = angle_vec3(du, dv),
-            uChange = dt * sin(theta) / (sin(phi) * norm(du)),
-            vChange = dt * sin(phi-theta) / (sin(180-phi) * norm(dv)))
-        echo(u, v, du, dv)
+            tmpU = sin(phi) * norm(du),
+            uChange = (!tmpU)? dt * sin(theta) / 100 : dt * sin(theta) / tmpU,
+            tmpV = sin(180-phi) * norm(dv),
+            vChange = (!tmpU)? dt * sin(phi-theta) / 100 : dt * sin(phi-theta) / tmpV)
+        echo(u, v, phi, du, dv, uChange, vChange)
         concat([u,v], gen_path(shape_gen, theta, dt, u+uChange, v+vChange));
 
 
 
-    // Generate points
-    points = [];
+    
     // polyhedron(gen_circle(0, 0.5, shape_gen, rad), );
-    path = gen_path(shape_gen, spiralAngle, 0.001);
+    path = gen_path(shape_gen, spiralAngle, 0.00001);
     echo (path);
+
+    // Generate points
+    points = [for (i=path) gen_circle(i.x, i.v, shape_gen, rad)];
+    formFromList(points);
 
     // function generate_path(height, angle=0, returnList=[], depthLeft=$fn) = 
     //     // (depthLeft=0)?
@@ -127,7 +132,7 @@ module loxodrome(shape_gen, spiralAngle, rad, cU = $U_COUNT, cV = $V_COUNT) {
 loxodrome(sphere_point_gen(20), 45, 3, 30, 10);
 
 
-form(sphere_point_gen(20));
+// form(sphere_point_gen(20));
     
 
 module form(shape_gen, cU = $U_COUNT, cV = $V_COUNT) {
