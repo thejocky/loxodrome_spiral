@@ -25,8 +25,15 @@ sphere_angle_gen = function (rad) function (u, v)
 // rad - radius of defined sphere
 // h - height from bottom
 // a - angle around vertical axis (unused)
+// sphere_point_gen = function (rad) function (u, v)
+//     [cos(v-0.5) * sqrt(rad^2 - ((u-1)*rad)^2), sin(v-0.5) * sqrt(rad^2 - ((u-1)*rad)^2), u*(2*rad)];
+
+function map(u, range) = u*(range[1]-range[0]) + range[0];
+
 sphere_point_gen = function (rad) function (u, v)
-    [cos(v) * sqrt(rad^2 - ((u-1)*rad)^2), sin(v) * sqrt(rad^2 - ((u-1)*rad)^2), u*(2*rad)];
+    let(theta = map(v, [0, 360]),
+        phi = map(u, [-90, 90]))
+    [cos(theta) * cos(phi), sin(theta) * cos(phi), sin(phi)] * rad;
 
 // function sphere_gen(rad) = 
 //     [sphere_angle_gen(rad), sphere_point_gen(rad), rad*2];
@@ -46,15 +53,15 @@ function translate(offset) = function (point)
 
 function rotateX(degree) = function(point)
     let(a0 = atan2(point.z, point.y), r=sqrt(point.y^2 + point.z^2))
-    [point.x, cos(a0+degrees)*r, sin(a0+degrees)*r];
+    [point.x, cos(a0+degree)*r, sin(a0+degree)*r];
 
 function rotateY(degree) = function(point)
     let(a0 = atan2(point.x, point.z), r=sqrt(point.x^2 + point.z^2))
-    [sin(a0+degrees)*r, point.y, cos(a0+degrees)*r];
+    [sin(a0+degree)*r, point.y, cos(a0+degree)*r];
 
 function rotateZ(degree) = function(point)
     let(a0 = atan2(point.y, point.x), r=sqrt(point.x^2 + point.y^2))
-    [cos(a0+degrees)*r, sin(a0+degrees)*r, point.z];
+    [cos(a0+degree)*r, sin(a0+degree)*r, point.z];
 
 function magnitude_vec3(vec3) =
     sqrt(vec3.x^2 + vec3.y^2, vec3.z^2);
@@ -67,11 +74,12 @@ function magnitude_vec3(vec3) =
 //     )
 
 function real_du(u, v, shape_gen, du=0.01) =
+    echo (shape_gen(u, v), shape_gen(u+du, v))
     (u > 0.5)?
         (shape_gen(u, v) - shape_gen(u-du, v))/du
     :   (shape_gen(u+du, v) - shape_gen(u, v))/du;
 function real_dv(u, v, shape_gen, dv=0.01) =
-    (u > 0.5)?
+    (v > 0.5)?
         (shape_gen(u, v) - shape_gen(u, v-dv))/dv:
         (shape_gen(u, v+dv) - shape_gen(u, v))/dv;
 
@@ -80,7 +88,7 @@ module loxodrome(shape_gen, spiralAngle, rad, cU = $U_COUNT, cV = $V_COUNT) {
     function gen_circle(u, v, shape_gen, rad) =
         let(pos = shape_gen(u, v))
         [for (i=[0:cV-1])
-        rotateZ(atan(point.y, point.x))(
+        rotateZ(atan2(pos.y, pos.x))(
             translate([0,norm([pos.x, pos.y]), pos.z]) (
                 rotateY(i*360/cV) ([rad, 0, 0])
             )
@@ -96,13 +104,16 @@ module loxodrome(shape_gen, spiralAngle, rad, cU = $U_COUNT, cV = $V_COUNT) {
             phi = angle_vec3(du, dv),
             uChange = dt * sin(theta) / (sin(phi) * norm(du)),
             vChange = dt * sin(phi-theta) / (sin(180-phi) * norm(dv)))
-        concat([u,v], gen_path(shaoe_gen, theta, dt, u+uChange, v+vChange));
+        echo(u, v, du, dv)
+        concat([u,v], gen_path(shape_gen, theta, dt, u+uChange, v+vChange));
 
 
 
     // Generate points
     points = [];
-    polyhedron(gen_circle(0, 0.5, shape_gen, rad), );
+    // polyhedron(gen_circle(0, 0.5, shape_gen, rad), );
+    path = gen_path(shape_gen, spiralAngle, 0.001);
+    echo (path);
 
     // function generate_path(height, angle=0, returnList=[], depthLeft=$fn) = 
     //     // (depthLeft=0)?
@@ -116,13 +127,13 @@ module loxodrome(shape_gen, spiralAngle, rad, cU = $U_COUNT, cV = $V_COUNT) {
 loxodrome(sphere_point_gen(20), 45, 3, 30, 10);
 
 
-
+form(sphere_point_gen(20));
     
 
 module form(shape_gen, cU = $U_COUNT, cV = $V_COUNT) {
     dU = 1/cU;
-    dV = 1/cV;
-    points = [for (u=[0:cU-1]) for (v=[0:cV-1])
+    dV = 1/(cV-1);
+    points = [for (u=[0:cU]) for (v=[0:cV-1])
         shape_gen(u*dU, v*dV)
     ];
 
@@ -130,8 +141,8 @@ module form(shape_gen, cU = $U_COUNT, cV = $V_COUNT) {
 
     faces = [
         for (v=[1:cV-2]) [0,v,v+1],
-        for (u=[0:cU-2]) for (v=[0:cV-2]) [u*cV+v, (u+1)*cV+v, (u+1)*cV+(v+1)],
-        for (u=[0:cU-2]) for (v=[0:cV-2]) [u*cV+v, (u+1)*cV+(v+1), u*cV+(v+1)],
+        for (u=[0:cU-1]) for (v=[0:cV-2]) [u*cV+v, (u+1)*cV+v, (u+1)*cV+(v+1)],
+        for (u=[0:cU-1]) for (v=[0:cV-2]) [u*cV+v, (u+1)*cV+(v+1), u*cV+(v+1)],
         for (v=[1:cV-2]) [v+1 + (cU-1)*cV, v + (cU-1)*cV, 0 + (cU-1)*cV]
     ];
     // echo (points);
@@ -153,8 +164,8 @@ module formFromList(shapeList) {
     form(shape_gen, uCount+1, vCount+1);
 }
 
-$U_COUNT = 5;
-$V_COUNT = 5;
+$U_COUNT = 20;
+$V_COUNT = 100;
 // SHAPE_LIST = [
 //     [[0,0,0], [0,1,0], [0.5,2,0.5]],
 //     [[1,0,0], [1,1,0], [0.5,2,0.5]],
