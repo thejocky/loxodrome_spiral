@@ -106,8 +106,8 @@ module loxodrome(shape_gen, spiralAngle, rad, cU = $U_COUNT, cV = $V_COUNT) {
             uChange = (!tmpU)? dt * sin(theta) / 100 : dt * sin(theta) / tmpU,
             tmpV = sin(180-phi) * norm(dv),
             vChange = (!tmpU)? dt * sin(phi-theta) / 100 : dt * sin(phi-theta) / tmpV)
-        echo(u, v, phi, du, dv, uChange, vChange)
-        concat([u,v], gen_path(shape_gen, theta, dt, u+uChange, v+vChange));
+        // echo(u, v, phi, du, dv, uChange, vChange)
+        concat([[u,v]], gen_path(shape_gen, theta, dt, u+uChange, v+vChange));
 
 
 
@@ -117,7 +117,8 @@ module loxodrome(shape_gen, spiralAngle, rad, cU = $U_COUNT, cV = $V_COUNT) {
     echo (path);
 
     // Generate points
-    points = [for (i=path) gen_circle(i.x, i.v, shape_gen, rad)];
+    points = [for (i=[[0,0], [.2,.2], [0.5,0.5], [.8,.8], [1,1]]) gen_circle(i.x, i.y, shape_gen, rad)];
+    echo(points);
     formFromList(points);
 
     // function generate_path(height, angle=0, returnList=[], depthLeft=$fn) = 
@@ -129,30 +130,28 @@ module loxodrome(shape_gen, spiralAngle, rad, cU = $U_COUNT, cV = $V_COUNT) {
     // points = [for (i = )]
 }
 
-loxodrome(sphere_point_gen(20), 45, 3, 30, 10);
-
 
 // form(sphere_point_gen(20));
     
 
 module form(shape_gen, cU = $U_COUNT, cV = $V_COUNT) {
     dU = 1/cU;
-    dV = 1/(cV-1);
-    points = [for (u=[0:cU]) for (v=[0:cV-1])
+    dV = 1/(cV);
+    points = [for (u=[0:cU]) for (v=[0:cV])
         shape_gen(u*dU, v*dV)
     ];
 
 
 
     faces = [
-        for (v=[1:cV-2]) [0,v,v+1],
+        // for (v=[1:cV-1]) [0,v,v+1],
         for (u=[0:cU-1]) for (v=[0:cV-2]) [u*cV+v, (u+1)*cV+v, (u+1)*cV+(v+1)],
         for (u=[0:cU-1]) for (v=[0:cV-2]) [u*cV+v, (u+1)*cV+(v+1), u*cV+(v+1)],
-        for (v=[1:cV-2]) [v+1 + (cU-1)*cV, v + (cU-1)*cV, 0 + (cU-1)*cV]
+        // for (v=[1:cV-1]) [v+1 + (cU-1)*cV, v + (cU-1)*cV, 0 + (cU-1)*cV]
     ];
-    // echo (points);
-    // echo (len(points));
-    // echo (faces);
+    echo (points);
+    echo (len(points));
+    echo (faces);
     // echo (len(faces));
     polyhedron(points, faces);
 
@@ -164,13 +163,16 @@ module formFromList(shapeList) {
     echo(vCount);
     echo(uCount);
     shape_gen = function (u, v)
-        shapeList[round(u*uCount)][round(v*vCount)];
+        echo(u*(uCount-1), v*(vCount-1), [round(u*(uCount-1)), round(v*(vCount-1))])
+        shapeList[round(u*(uCount-1))][round(v*(vCount-1))];
     
-    form(shape_gen, uCount+1, vCount+1);
+    form(shape_gen, uCount-1, vCount-1);
 }
 
 $U_COUNT = 20;
 $V_COUNT = 100;
+
+loxodrome(sphere_point_gen(20), 45, 3, 30, 10);
 // SHAPE_LIST = [
 //     [[0,0,0], [0,1,0], [0.5,2,0.5]],
 //     [[1,0,0], [1,1,0], [0.5,2,0.5]],
