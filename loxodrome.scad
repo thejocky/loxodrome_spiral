@@ -83,6 +83,46 @@ function real_dv(u, v, shape_gen, dv=0.001) =
         (shape_gen(u, v) - shape_gen(u, v-dv))/dv:
         (shape_gen(u, v+dv) - shape_gen(u, v))/dv;
 
+
+
+
+
+
+
+module tubify(shape_gen, points, rad, cV=$V_COUNT) {
+
+    function gen_circle(pos, theta, phi) =
+        [for (i=[0:cV-1])
+        translate(pos) (
+            rotateZ(theta) (rotateY(phi) (
+                rotateX(i*360/cV) ([0, rad, 0])
+            ))
+        )
+        ];
+
+    outPoints = [for(i=[0:len(points)-2])
+        // echo(points[i].x, points[i].y)
+        let(pos = shape_gen(points[i].x, points[i].y),
+            next = shape_gen(points[i+1].x, points[i+1].y),
+            theta = atan2(next.y-pos.y, next.x-pos.x),
+            phi = atan2(next.z-pos.z, -norm([next.x-pos.x, next.y-pos.y])))
+        // echo(pos, next, theta, phi, norm([next.x-pos.x, next.y-pos.y]))
+        echo(phi, theta, next.y-pos.y, next.x-pos.x)
+        gen_circle(pos, theta, phi),
+        
+        let(pos = shape_gen(points[len(points)-2].x, points[len(points)-2].y),
+            next = shape_gen(points[len(points)-1].x, points[len(points)-1].y),
+            theta = atan2(next.y-pos.y, next.x-pos.x),
+            phi = atan2(next.z-pos.z, -norm([next.x-pos.x, next.y-pos.y])))
+        gen_circle(next, theta, phi)
+
+    ];
+    // echo(outPoints);
+    formFromList(outPoints);
+}
+
+
+
 module loxodrome(shape_gen, spiralAngle, rad, cU = $U_COUNT, cV = $V_COUNT, uRange=[0,1]) {
 
     function gen_circle(u, v, shape_gen, rad) =
@@ -113,17 +153,19 @@ module loxodrome(shape_gen, spiralAngle, rad, cU = $U_COUNT, cV = $V_COUNT, uRan
 
     
     // polyhedron(gen_circle(0, 0.5, shape_gen, rad), );
-    path = gen_path(shape_gen, spiralAngle, 0.1);
+    path = gen_path(shape_gen, spiralAngle, .5);
+
+    tubify(shape_gen, path, rad);
     // echo (path);
 
     // Generate points
-    points = [for (i=path) gen_circle(i.x, i.y, shape_gen, rad)];
+    // points = [for (i=path) gen_circle(i.x, i.y, shape_gen, rad)];
     // points = [for (i=[[0,0], [.2,.2], [0.5,0.5], [.8,.8], [1,1]]) gen_circle(i.x, i.y, shape_gen, rad)];
     // echo(points);
-    for (i=[0:360/10: 359]) {
-        rotate([0,0,i])
-        formFromList(points);
-    }
+    // for (i=[0:360/10: 359]) {
+        // rotate([0,0,i])
+        // formFromList(points);
+    // }
 
     // function generate_path(height, angle=0, returnList=[], depthLeft=$fn) = 
     //     // (depthLeft=0)?
@@ -137,18 +179,15 @@ module loxodrome(shape_gen, spiralAngle, rad, cU = $U_COUNT, cV = $V_COUNT, uRan
 
 // form(sphere_point_gen(20));
 
-module longitude(shape_gen, u, cV = $V_COUNT) {
-    function gen_circle(v, shape_gen, rad) =
-        let(pos = shape_gen(u, v))
-        [for (i=[0:cV])
-        rotateZ(atan2(pos.y, pos.x))(
-            translate([norm([pos.x, pos.y]),0, pos.z]) (
-                rotateY(i*360/cV) ([rad, 0, 0])
-            )
-        )
-        ];
-    for (i=[0:1/])
-    
+module latitude(shape_gen, u, rad, cV = $V_COUNT) {
+    shape_points = [for (i=[0:cV]) [u, i/cV]];
+    tubify(shape_gen, shape_points, rad);
+}
+
+module longitude(shape_gen, v, rad, range=[0,1], cU = $U_COUNT) {
+    shape_points = [for (i=[0:cU]) [i/cU * (range[1]-range[0]) + range[0], v]];
+    tubify(shape_gen, shape_points, rad);
+    // echo(shape_points);
 }
     
 
@@ -189,11 +228,20 @@ module formFromList(shapeList) {
 
 $U_COUNT = 50;
 $V_COUNT = 50;
-// for (i=[0:360/10:359]) {
+// for (i=[0:360/5:359]) {
 //     rotate([0,0,i])
-    loxodrome(sphere_point_gen(20), 35, 0.5, 1, 40, uRange=[0.105,0.895]);
+//     loxodrome(sphere_point_gen(20), 35, 0.8, 1, 40, uRange=[0.005,0.995]);
 // }
-form(sphere_point_gen(20));
+// form(sphere_point_gen(20));
+
+// for (i=[1/9:1/9:0.999])
+//     latitude(sphere_point_gen(20), i, 0.5);
+for (i=[0:1/1:0.999])
+    longitude(sphere_point_gen(20), i+0.25/2, 0.5);
+
+$fn = 50;
+translate([0,0,-21])
+cylinder(3,5,5);
 // SHAPE_LIST = [
 //     [[0,0,0], [0,1,0], [0.5,2,0.5]],
 //     [[1,0,0], [1,1,0], [0.5,2,0.5]],
